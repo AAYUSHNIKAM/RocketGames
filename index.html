@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body {
+        margin: 0;
+        overflow: hidden;
+        font-family: "Arial", sans-serif;
+        background-color: black;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+      }
+
+      canvas {
+        display: block;
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+
+      #score {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        color: white;
+        font-size: 18px;
+      }
+
+      #controls {
+        position: absolute;
+        bottom: 20px;
+        width: 100%;
+        text-align: center;
+        display: flex;
+        flex-direction: row;
+      }
+
+      button {
+        padding: 12px;
+        font-size: 16px;
+        margin: 8px 0;
+      }
+
+      #gameOverPopup {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background-color: rgba(0, 0, 0, 0.8);
+        padding: 16px;
+        color: white;
+        text-align: center;
+        max-width: 300px;
+        width: 80%;
+      }
+
+      #gameOverPopup h1 {
+        margin-bottom: 16px;
+      }
+
+      #gameOverPopup button {
+        padding: 12px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+
+      p.name {
+        font-size: 1em;
+        color: #00b5ff;
+      }
+
+      #restartButton {
+        background-color: #f57c00;
+        border: solid yellow;
+        border-radius: 14px;
+      }
+
+      #leftBtn {
+        background: #00c7ff;
+        width: 35%;
+        font-size: 1.5em;
+        color: black;
+        border-radius: 14px;
+        margin-top: 8px;
+        left: 3%;
+        position: relative;
+      }
+
+      #rightBtn {
+        background: #00c7ff;
+        width: 35%;
+        font-size: 1.5em;
+        color: black;
+        border-radius: 14px;
+        margin-top: 8px;
+        left: 26%;
+        position: relative;
+      }
+
+      @media screen and (min-width: 600px) {
+        #controls {
+          flex-direction: row;
+        }
+
+        button {
+          margin: 0 8px;
+        }
+      }
+    </style>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function initializeCanvas() {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight;
+        }
+
+        initializeCanvas();
+
+        window.addEventListener("resize", () => {
+          initializeCanvas();
+        });
+
+        const rocket = {
+          x: canvas.width / 2 - canvas.width * 0.1,
+          y: canvas.height - canvas.height * 0.2,
+          width: canvas.width * 0.2,
+          height: canvas.height * 0.25,
+          speed: 7,
+        };
+
+        const obstacles = [];
+        const stars = [];
+        let score = 0;
+        let movementDirection = "";
+        let gameRunning = true;
+
+        function drawRocket() {
+          const rocketImg = new Image();
+          rocketImg.src = "rocket.png"; // Replace with the actual path to your rocket image
+          ctx.drawImage(
+            rocketImg,
+            rocket.x,
+            rocket.y,
+            rocket.width,
+            rocket.height
+          );
+        }
+
+        function drawObstacles() {
+          const obstacleImg = new Image();
+          obstacleImg.src = "obstacle.png"; // Replace with the actual path to your obstacle image
+
+          for (const obstacle of obstacles) {
+            ctx.drawImage(
+              obstacleImg,
+              obstacle.x,
+              obstacle.y,
+              obstacle.width,
+              obstacle.height
+            );
+          }
+        }
+
+        function drawStars() {
+          ctx.fillStyle = "white";
+          for (const star of stars) {
+            ctx.fillRect(star.x, star.y, star.size, star.size);
+          }
+        }
+
+        function updateRocket() {
+          if (movementDirection === "left" && rocket.x > 0) {
+            rocket.x -= rocket.speed;
+          }
+
+          if (
+            movementDirection === "right" &&
+            rocket.x < canvas.width - rocket.width
+          ) {
+            rocket.x += rocket.speed;
+          }
+        }
+
+        function updateObstacles() {
+          for (const obstacle of obstacles) {
+            obstacle.y += obstacle.speed;
+            if (collision(rocket, obstacle)) {
+              endGame();
+            }
+          }
+
+          obstacles.forEach((obstacle, index) => {
+            if (obstacle.y > canvas.height) {
+              obstacles.splice(index, 1);
+              score++;
+              updateScore();
+            }
+          });
+
+          if (obstacles.length === 0 && Math.random() < 0.03) {
+            const obstacleSize =
+              Math.random() * (canvas.width * 0.1) + canvas.width * 0.05;
+            const obstacleX = Math.random() * (canvas.width - obstacleSize);
+            const obstacleY = -obstacleSize;
+            const obstacleSpeed = Math.random() * (18 + score / 50) + 3;
+
+            obstacles.push({
+              x: obstacleX,
+              y: obstacleY,
+              width: obstacleSize,
+              height: obstacleSize,
+              speed: obstacleSpeed,
+            });
+          }
+        }
+
+        function updateStars() {
+          for (const star of stars) {
+            star.y += star.speed;
+            if (star.y > canvas.height) {
+              star.y = -star.size;
+            }
+          }
+        }
+
+        function updateScore() {
+          document.getElementById("score").innerText = "Score: " + score;
+        }
+
+        function collision(obj1, obj2) {
+          return (
+            obj1.x < obj2.x + obj2.width &&
+            obj1.x + obj1.width > obj2.x &&
+            obj1.y < obj2.y + obj2.height &&
+            obj1.y + obj1.height > obj2.y
+          );
+        }
+
+        function draw() {
+          if (!gameRunning) {
+            return;
+          }
+
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          drawStars();
+          drawRocket();
+          drawObstacles();
+
+          updateRocket();
+          updateObstacles();
+          updateStars();
+
+          requestAnimationFrame(draw);
+        }
+
+        function endGame() {
+          gameRunning = false;
+          showGameOverPopup();
+        }
+
+        function showGameOverPopup() {
+          const gameOverPopup = document.getElementById("gameOverPopup");
+          const restartButton = document.getElementById("restartButton");
+
+          gameOverPopup.style.display = "block";
+
+          restartButton.addEventListener("click", () => {
+            document.location.reload();
+          });
+        }
+
+        document
+          .getElementById("leftBtn")
+          .addEventListener("touchstart", () => {
+            movementDirection = "left";
+          });
+
+        document.getElementById("leftBtn").addEventListener("touchend", () => {
+          movementDirection = "";
+        });
+
+        document
+          .getElementById("rightBtn")
+          .addEventListener("touchstart", () => {
+            movementDirection = "right";
+          });
+
+        document.getElementById("rightBtn").addEventListener("touchend", () => {
+          movementDirection = "";
+        });
+
+        for (let i = 0; i < 100; i++) {
+          stars.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 3 + 1,
+            speed: Math.random() * 2 + 1,
+          });
+        }
+
+        draw();
+      });
+    </script>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="score">Score: 0</div>
+    <div id="controls">
+      <button id="leftBtn">←</button>
+      <button id="rightBtn">→</button>
+    </div>
+    <div id="gameOverPopup">
+      <h1>Game Over</h1>
+      <p>Thanks for playing!</p>
+      <p class="name">Made by:- AAYUSH NIKAM</p>
+      <button id="restartButton">Restart</button>
+    </div>
+  </body>
+</html>
